@@ -103,7 +103,7 @@ void loop() {
   delay(700);
 
   //Check if the dispensing condition is met
-  if (hour == 20 && minute == 13 && second == 00) {
+  if (hour == 20 && minute == 24 && second == 00) {
     Serial.println("Dispensing pills...");
     doorServo.write(open);
     delay(2000);
@@ -114,13 +114,18 @@ void loop() {
 
 void dispensePills() {
   int currDistance = measureDistance();
+  int rotationTime = 2000;  // Total desired rotation time in milliseconds
+  unsigned long startTime = millis();  // Capture the start time
+  unsigned long elapsedTime = 0;       // Initialize elapsed time tracker
 
   // Start rotating the main servo
   mainServo.write(rotateSignal);
-  
-  // Continuously check the distance while the servo is rotating
-  while (true) {
+  Serial.println("Servo started rotating.");
+
+  // Continuously check the distance and time while the servo is rotating
+  while (elapsedTime < rotationTime) {
     currDistance = measureDistance();
+    elapsedTime = millis() - startTime;  // Update elapsed time
 
     // If the distance is out of the range, stop the servo
     if (currDistance > 125 || currDistance < 80) {
@@ -133,14 +138,18 @@ void dispensePills() {
         delay(100);  // Small delay to avoid rapid checking
       }
 
-      // Resume the servo rotation when the distance is back within range
+      // Once the distance is back in range, resume the servo rotation
       Serial.println("Distance is back in range. Resuming servo rotation.");
       mainServo.write(rotateSignal);
+
+      // Update the start time to reflect the time when the rotation resumed
+      startTime = millis() - elapsedTime;  // Adjust start time so elapsed time continues correctly
     }
+
     delay(100);  // Small delay to avoid rapid checking
   }
 
-  // Ensure the servo stops after the rotation or distance check
+  // Ensure the servo stops after the total rotation time
   mainServo.write(stopSignal);
   Serial.println("Pill dispensed\n");
 
@@ -149,6 +158,7 @@ void dispensePills() {
   doorServo.write(close);
   readySound();
 }
+
 
 // measure distance logic
 int measureDistance() {
