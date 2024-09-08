@@ -30,12 +30,11 @@ Adafruit_VL53L0X lox = Adafruit_VL53L0X();
 
 // positions of the pills and default
 const int stopSignal = 90;  // Signal to stop the servo 
-const int rotateSignal = 180;  // Signal to make the servo rotate
+const int rotateSignal = 95;  // Signal to make the servo rotate
 const int rotationTime = 1200;
 
 int open = 0;
 int close = 90;
-int daily = 0;
 
 void setup() {
   Serial.begin(9600);
@@ -49,6 +48,9 @@ void setup() {
     while (1); 
   } else {
     Serial.println("RTC initialized.");
+  }
+  if (rtc.lostPower()) {
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
 
   if (!lox.begin()) {
@@ -72,36 +74,27 @@ void loop() {
   int hour = now.hour(); 
   int second = now.second();
 
-  hour -= 5;
-  if (hour < 0) {
-    hour += 24;
-  }
-
-  String meridiem = "AM";
-  if (hour >= 12) {
-    meridiem = "PM";
-    if (hour > 12) {
-      hour -= 12;
-    }
-  } else if (hour == 0) {
-    hour = 12;
-  }
-
-  // Print current time
+  Serial.print("Current time: ");
+  Serial.print(now.year(), DEC);
+  Serial.print('/');
+  Serial.print(now.month(), DEC);
+  Serial.print('/');
+  Serial.print(now.day(), DEC);
+  Serial.print(" ");
   Serial.print(hour, DEC);
   Serial.print(':');
   Serial.print(minute, DEC);
   Serial.print(':');
   Serial.print(second, DEC);
-  Serial.print(" ");
-  Serial.println(meridiem);
+  Serial.println();
+  
 
   // Debug message to check if measureDistance is working
   int distance = measureDistance();
   Serial.print("Measured distance: ");
   Serial.println(distance);
 
-  if (distance <= 125) {
+  if (distance <= 125 && distance >= 80) {
     digitalWrite(sensorLED, HIGH);
   } else {
     digitalWrite(sensorLED, LOW);
@@ -109,42 +102,55 @@ void loop() {
 
   delay(700);
 
-  // Check if the dispensing condition is met
-  if (hour == 7 && minute == 9 && meridiem == "PM" && daily == 0) {
+  //Check if the dispensing condition is met
+  if (hour == 20 && minute == 13 && second == 00) {
     Serial.println("Dispensing pills...");
     doorServo.write(open);
     delay(2000);
     dispensePills();
-    daily = 1;
   }
 }
 
 
 void dispensePills() {
   int currDistance = measureDistance();
-  unsigned long startTime = millis();
 
-  // Start rotating the serv
-  mainServo.write(100);
-
-  // Keep rotating until one full rotation or distance exceeds 225
-  while (millis() - startTime < rotationTime) {
+  // Start rotating the main servo
+  mainServo.write(rotateSignal);
+  
+  // Continuously check the distance while the servo is rotating
+  while (true) {
     currDistance = measureDistance();
-    if (currDistance >= 225) {
-      mainServo.write(stopSignal);  // Stop the servo
-      while (measureDistance() >= 225);  // Wait until distance is back to < 225
-      break;
+
+    // If the distance is out of the range, stop the servo
+    if (currDistance > 125 || currDistance < 80) {
+      mainServo.write(stopSignal);
+      Serial.println("Servo stopped due to distance out of range.");
+      
+      // Wait until the distance is back within the valid range
+      while (currDistance > 125 || currDistance < 80) {
+        currDistance = measureDistance();
+        delay(100);  // Small delay to avoid rapid checking
+      }
+
+      // Resume the servo rotation when the distance is back within range
+      Serial.println("Distance is back in range. Resuming servo rotation.");
+      mainServo.write(rotateSignal);
     }
+    delay(100);  // Small delay to avoid rapid checking
   }
 
-  mainServo.write(stopSignal);  // Ensure the servo stops after the rotation or distance check
+  // Ensure the servo stops after the rotation or distance check
+  mainServo.write(stopSignal);
   Serial.println("Pill dispensed\n");
+
+  // Close the door and play the ready sound
   delay(1000);
   doorServo.write(close);
   readySound();
-
 }
 
+// measure distance logic
 int measureDistance() {
   VL53L0X_RangingMeasurementData_t measure;
 
@@ -159,8 +165,7 @@ int measureDistance() {
   }
 }
 
-
-
+// play melody 
 void readySound() {
   int size = sizeof(durations) / sizeof(int);
 
