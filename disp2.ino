@@ -145,7 +145,7 @@ void loop() {
   delay(700);
 
   //Check if the dispensing condition is met
-  if (hour == 7 && minute == 0 && second == 00) {
+  if (hour == 20 && minute == 0 && second == 00) {
     Serial.println("Dispensing pills...");
     doorServo.write(open);
     delay(2000);
@@ -247,57 +247,57 @@ void displayNumber(int num) {
   } else if (num == 2) {
     digitalWrite(a, HIGH);
     digitalWrite(b, HIGH);
-    digitalWrite(g, HIGH);
-    digitalWrite(e, HIGH);
+    digitalWrite(f, HIGH);
     digitalWrite(d, HIGH);
+    digitalWrite(g, HIGH);
   } else if (num == 3) {
     digitalWrite(a, HIGH);
     digitalWrite(b, HIGH);
-    digitalWrite(g, HIGH);
-    digitalWrite(c, HIGH);
-    digitalWrite(d, HIGH);
-  } else if (num == 4) {
     digitalWrite(f, HIGH);
+    digitalWrite(c, HIGH);
     digitalWrite(g, HIGH);
+  } else if (num == 4) {
+    digitalWrite(e, HIGH);
+    digitalWrite(f, HIGH);
     digitalWrite(b, HIGH);
     digitalWrite(c, HIGH);
   } else if (num == 5) {
     digitalWrite(a, HIGH);
+    digitalWrite(e, HIGH);
     digitalWrite(f, HIGH);
-    digitalWrite(g, HIGH);
     digitalWrite(c, HIGH);
-    digitalWrite(d, HIGH);
+    digitalWrite(g, HIGH);
   } else if (num == 6) {
     digitalWrite(a, HIGH);
     digitalWrite(f, HIGH);
-    digitalWrite(g, HIGH);
+    digitalWrite(f, HIGH);
     digitalWrite(c, HIGH);
+    digitalWrite(g, HIGH);
     digitalWrite(d, HIGH);
-    digitalWrite(e, HIGH);
   } else if (num == 7) {
     digitalWrite(a, HIGH);
     digitalWrite(b, HIGH);
-    digitalWrite(g, HIGH);
+    digitalWrite(f, HIGH);
     digitalWrite(c, HIGH);
   } else if (num == 8) {
     digitalWrite(a, HIGH);
     digitalWrite(b, HIGH);
     digitalWrite(c, HIGH);
+    digitalWrite(g, HIGH);
     digitalWrite(d, HIGH);
     digitalWrite(e, HIGH);
     digitalWrite(f, HIGH);
-    digitalWrite(g, HIGH);
   } else if (num == 9) {
     digitalWrite(a, HIGH);
     digitalWrite(b, HIGH);
     digitalWrite(c, HIGH);
-    digitalWrite(g, HIGH);
     digitalWrite(f, HIGH);
-  } else if (num == 10) {
-    digitalWrite(g, HIGH);
-    digitalWrite(c, HIGH);
-    digitalWrite(d, HIGH);
     digitalWrite(e, HIGH);
+  } else if (num == 10) {
+    digitalWrite(f, HIGH);
+    digitalWrite(c, HIGH);
+    digitalWrite(g, HIGH);
+    digitalWrite(d, HIGH);
   } else if (num == 11) {
     digitalWrite(e, HIGH);
     digitalWrite(c, HIGH);
@@ -305,7 +305,7 @@ void displayNumber(int num) {
     digitalWrite(d, HIGH);
   } else if (num == 12) {
     digitalWrite(a, HIGH);
-    digitalWrite(d, HIGH);
+    digitalWrite(g, HIGH);
   } else {
     Serial.println("1-digit display error");
     digitalWrite(errorLED, HIGH);
