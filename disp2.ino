@@ -9,7 +9,17 @@ Servo mainServo;
 Servo doorServo;
 
 int sensorLED = 8;
+int errorLED = 11;
 const int buzzerPin = 7;
+
+// 1-digit display pins
+int a = 2;
+int b = 3;
+int c = 4;
+int d = 5;
+int e = 6;
+int f = 12;
+int g = 13;
 
 
 int melody[] = {
@@ -39,15 +49,27 @@ int close = 90;
 void setup() {
   Serial.begin(9600);
 
+  // 1-digit display pins
+  pinMode(a, OUTPUT);
+  pinMode(b, OUTPUT);
+  pinMode(c, OUTPUT);
+  pinMode(d, OUTPUT);
+  pinMode(e, OUTPUT);
+  pinMode(f, OUTPUT);
+  pinMode(g, OUTPUT);
+
   pinMode(sensorLED, OUTPUT);
   pinMode(buzzerPin, OUTPUT);
+  pinMode(errorLED, OUTPUT);
 
   // Initialize RCT and Distance sensor. Pause program if not able to initialize
   if (!rtc.begin()) {
     Serial.println("Couldn't find RTC");
+    digitalWrite(errorLED, HIGH);
     while (1); 
   } else {
     Serial.println("RTC initialized.");
+    digitalWrite(errorLED, LOW);
   }
   if (rtc.lostPower()) {
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
@@ -55,9 +77,11 @@ void setup() {
 
   if (!lox.begin()) {
     Serial.println(F("Failed to boot VL53L0X"));
+    digitalWrite(errorLED, HIGH);
     while (1);
   }
   Serial.println(F("VL53L0X Initialized"));
+  digitalWrite(errorLED, LOW);
 
   // 
   mainServo.attach(9);
@@ -70,7 +94,15 @@ void setup() {
 void loop() {
   DateTime now = rtc.now();
 
-  int minute = now.minute();
+  // Check if RTC is working
+  if (!rtc.begin() || rtc.lostPower()) {
+    Serial.println("RTC lost signal or power.");
+    digitalWrite(errorLED, HIGH);  // Turn on error LED
+  } else {
+    digitalWrite(errorLED, LOW);   // Turn off error LED
+  }
+
+  int minute = now.minute() + 1;
   int hour = now.hour(); 
   int second = now.second();
 
@@ -87,12 +119,22 @@ void loop() {
   Serial.print(':');
   Serial.print(second, DEC);
   Serial.println();
+
+  int temp = convertTime(hour);
+  Serial.println(temp);
+  displayNumber(temp);
   
 
   // Debug message to check if measureDistance is working
   int distance = measureDistance();
   Serial.print("Measured distance: ");
   Serial.println(distance);
+  if (distance < 0) { 
+    Serial.println("VL53L0X lost signal or power.");
+    digitalWrite(errorLED, HIGH);  // Turn on error LED
+  } else if (!rtc.lostPower()) {  // LED stays off if no issues
+    digitalWrite(errorLED, LOW);   // Turn off error LED if all is working
+  }
 
   if (distance <= 125 && distance >= 80) {
     digitalWrite(sensorLED, HIGH);
@@ -103,7 +145,7 @@ void loop() {
   delay(700);
 
   //Check if the dispensing condition is met
-  if (hour == 20 && minute == 24 && second == 00) {
+  if (hour == 7 && minute == 0 && second == 00) {
     Serial.println("Dispensing pills...");
     doorServo.write(open);
     delay(2000);
@@ -111,12 +153,12 @@ void loop() {
   }
 }
 
-
+// dispensing logic
 void dispensePills() {
   int currDistance = measureDistance();
-  int rotationTime = 2000;  // Total desired rotation time in milliseconds
+  int rotationTime = 2000;  
   unsigned long startTime = millis();  // Capture the start time
-  unsigned long elapsedTime = 0;       // Initialize elapsed time tracker
+  unsigned long elapsedTime = 0;       //  time tracker
 
   // Start rotating the main servo
   mainServo.write(rotateSignal);
@@ -125,31 +167,29 @@ void dispensePills() {
   // Continuously check the distance and time while the servo is rotating
   while (elapsedTime < rotationTime) {
     currDistance = measureDistance();
-    elapsedTime = millis() - startTime;  // Update elapsed time
+    elapsedTime = millis() - startTime;  // update time passed
 
-    // If the distance is out of the range, stop the servo
+    // if the distance is out of the range, stop the servo
     if (currDistance > 125 || currDistance < 80) {
       mainServo.write(stopSignal);
       Serial.println("Servo stopped due to distance out of range.");
       
-      // Wait until the distance is back within the valid range
+      // wait until the distance is back within the valid range
       while (currDistance > 125 || currDistance < 80) {
         currDistance = measureDistance();
-        delay(100);  // Small delay to avoid rapid checking
+        delay(100);  
       }
 
-      // Once the distance is back in range, resume the servo rotation
+      //  once the distance is back in range, continue to rotate 
       Serial.println("Distance is back in range. Resuming servo rotation.");
       mainServo.write(rotateSignal);
 
       // Update the start time to reflect the time when the rotation resumed
-      startTime = millis() - elapsedTime;  // Adjust start time so elapsed time continues correctly
+      startTime = millis() - elapsedTime;  
     }
-
-    delay(100);  // Small delay to avoid rapid checking
+    delay(100);  
   }
 
-  // Ensure the servo stops after the total rotation time
   mainServo.write(stopSignal);
   Serial.println("Pill dispensed\n");
 
@@ -187,5 +227,101 @@ void readySound() {
     delay(pauseBetweenNotes);
     
     noTone(buzzerPin);
+  }
+}
+
+// logic to display numbers
+void displayNumber(int num) {
+  // Turn off all segments initially
+  digitalWrite(a, LOW);
+  digitalWrite(b, LOW);
+  digitalWrite(c, LOW);
+  digitalWrite(d, LOW);
+  digitalWrite(e, LOW);
+  digitalWrite(f, LOW);
+  digitalWrite(g, LOW);
+  
+  if (num == 1) {
+    digitalWrite(b, HIGH);
+    digitalWrite(c, HIGH);
+  } else if (num == 2) {
+    digitalWrite(a, HIGH);
+    digitalWrite(b, HIGH);
+    digitalWrite(g, HIGH);
+    digitalWrite(e, HIGH);
+    digitalWrite(d, HIGH);
+  } else if (num == 3) {
+    digitalWrite(a, HIGH);
+    digitalWrite(b, HIGH);
+    digitalWrite(g, HIGH);
+    digitalWrite(c, HIGH);
+    digitalWrite(d, HIGH);
+  } else if (num == 4) {
+    digitalWrite(f, HIGH);
+    digitalWrite(g, HIGH);
+    digitalWrite(b, HIGH);
+    digitalWrite(c, HIGH);
+  } else if (num == 5) {
+    digitalWrite(a, HIGH);
+    digitalWrite(f, HIGH);
+    digitalWrite(g, HIGH);
+    digitalWrite(c, HIGH);
+    digitalWrite(d, HIGH);
+  } else if (num == 6) {
+    digitalWrite(a, HIGH);
+    digitalWrite(f, HIGH);
+    digitalWrite(g, HIGH);
+    digitalWrite(c, HIGH);
+    digitalWrite(d, HIGH);
+    digitalWrite(e, HIGH);
+  } else if (num == 7) {
+    digitalWrite(a, HIGH);
+    digitalWrite(b, HIGH);
+    digitalWrite(g, HIGH);
+    digitalWrite(c, HIGH);
+  } else if (num == 8) {
+    digitalWrite(a, HIGH);
+    digitalWrite(b, HIGH);
+    digitalWrite(c, HIGH);
+    digitalWrite(d, HIGH);
+    digitalWrite(e, HIGH);
+    digitalWrite(f, HIGH);
+    digitalWrite(g, HIGH);
+  } else if (num == 9) {
+    digitalWrite(a, HIGH);
+    digitalWrite(b, HIGH);
+    digitalWrite(c, HIGH);
+    digitalWrite(g, HIGH);
+    digitalWrite(f, HIGH);
+  } else if (num == 10) {
+    digitalWrite(g, HIGH);
+    digitalWrite(c, HIGH);
+    digitalWrite(d, HIGH);
+    digitalWrite(e, HIGH);
+  } else if (num == 11) {
+    digitalWrite(e, HIGH);
+    digitalWrite(c, HIGH);
+    digitalWrite(b, HIGH);
+    digitalWrite(d, HIGH);
+  } else if (num == 12) {
+    digitalWrite(a, HIGH);
+    digitalWrite(d, HIGH);
+  } else {
+    Serial.println("1-digit display error");
+    digitalWrite(errorLED, HIGH);
+  }
+}
+
+int convertTime(int time) {
+  if (time == 0 || time == 00) {
+    return 12;  
+  } else if (time >= 1 && time <= 12) {
+    return time;  
+  } else if (time >= 13 && time <= 23) {
+    return time - 12;  
+  } else {
+    return -1;  
+    Serial.println("Invallid time input!!");
+    digitalWrite(errorLED, HIGH);
   }
 }
