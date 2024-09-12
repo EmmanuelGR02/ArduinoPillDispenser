@@ -138,14 +138,15 @@ void loop() {
 
   if (distance <= 125 && distance >= 80) {
     digitalWrite(sensorLED, HIGH);
-  } else {
+  } else if (distance > 125 || distance < 80)  {
+    digitalWrite(errorLED, HIGH);
     digitalWrite(sensorLED, LOW);
   }
 
   delay(700);
 
   //Check if the dispensing condition is met
-  if (hour == 20 && minute == 0 && second == 00) {
+  if (hour == 6 && minute == 15 && second == 0) {
     Serial.println("Dispensing pills...");
     doorServo.write(open);
     delay(2000);
@@ -156,7 +157,7 @@ void loop() {
 // dispensing logic
 void dispensePills() {
   int currDistance = measureDistance();
-  int rotationTime = 2000;  
+  int rotationTime = 2500;  
   unsigned long startTime = millis();  // Capture the start time
   unsigned long elapsedTime = 0;       //  time tracker
 
@@ -172,6 +173,8 @@ void dispensePills() {
     // if the distance is out of the range, stop the servo
     if (currDistance > 125 || currDistance < 80) {
       mainServo.write(stopSignal);
+      digitalWrite(sensorLED, LOW);
+      digitalWrite(errorLED, HIGH);
       Serial.println("Servo stopped due to distance out of range.");
       
       // wait until the distance is back within the valid range
@@ -182,6 +185,8 @@ void dispensePills() {
 
       //  once the distance is back in range, continue to rotate 
       Serial.println("Distance is back in range. Resuming servo rotation.");
+      digitalWrite(sensorLED, HIGH);
+      digitalWrite(errorLED, LOW);
       mainServo.write(rotateSignal);
 
       // Update the start time to reflect the time when the rotation resumed
@@ -270,7 +275,7 @@ void displayNumber(int num) {
   } else if (num == 6) {
     digitalWrite(a, HIGH);
     digitalWrite(f, HIGH);
-    digitalWrite(f, HIGH);
+    digitalWrite(e, HIGH);
     digitalWrite(c, HIGH);
     digitalWrite(g, HIGH);
     digitalWrite(d, HIGH);
